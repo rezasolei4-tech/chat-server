@@ -23,13 +23,30 @@
         .message.other { background: rgba(51, 65, 85, 0.9); color: #e2e8f0; align-self: flex-end; border-bottom-left-radius: 4px; }
         .message .sender-name { font-size: 11px; opacity: 0.8; margin-bottom: 4px; display: block; }
         .message audio { width: 100%; margin-top: 5px; }
-        .chat-input { display: flex; padding: 12px; background: rgba(15, 23, 42, 0.8); gap: 8px; position: relative; z-index: 1; }
-        .chat-input input { flex: 1; padding: 12px; border: none; border-radius: 24px; background: rgba(30, 41, 59, 0.9); color: white; font-size: 14px; outline: none; }
+        .chat-input { display: flex; padding: 12px; background: rgba(15, 23, 42, 0.8); gap: 8px; position: relative; z-index: 1; flex-wrap: wrap; }
+        .chat-input input { flex: 1; min-width: 100px; padding: 12px; border: none; border-radius: 24px; background: rgba(30, 41, 59, 0.9); color: white; font-size: 14px; outline: none; }
         .chat-input button { padding: 12px 20px; border: none; border-radius: 24px; background: #2563eb; color: white; font-size: 14px; cursor: pointer; font-weight: bold; }
         .chat-input button:hover { background: #1d4ed8; }
         .mic-btn { background: #10b981; font-size: 16px; }
         .mic-btn.recording { background: #ef4444; animation: pulse 1s infinite; }
+        .call-btn { background: #8b5cf6; font-size: 16px; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        
+        /* پنجره تماس تصویری */
+        .call-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.95); z-index: 100; flex-direction: column; justify-content: center; align-items: center; padding: 20px; }
+        .call-modal.active { display: flex; }
+        .video-grid { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; align-items: center; width: 100%; max-width: 800px; }
+        .video-wrapper { position: relative; width: 300px; height: 225px; background: #000; border-radius: 12px; overflow: hidden; border: 2px solid #334155; }
+        .video-wrapper video { width: 100%; height: 100%; object-fit: cover; }
+        .video-label { position: absolute; bottom: 5px; right: 5px; background: rgba(0,0,0,0.7); color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+        .call-controls { margin-top: 20px; display: flex; gap: 15px; }
+        .call-controls button { padding: 15px 30px; border: none; border-radius: 50px; font-size: 16px; cursor: pointer; font-weight: bold; }
+        .end-call-btn { background: #ef4444; color: white; }
+        .incoming-call { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #2563eb; color: white; padding: 15px 25px; border-radius: 12px; z-index: 200; display: none; box-shadow: 0 5px 20px rgba(0,0,0,0.5); }
+        .incoming-call.active { display: block; }
+        .incoming-call button { margin: 0 5px; padding: 8px 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .accept-btn { background: #10b981; color: white; }
+        .reject-btn { background: #ef4444; color: white; }
     </style>
 </head>
 <body>
@@ -50,8 +67,33 @@
                 <input type="text" id="messageInput" placeholder="پیام خود را بنویسید..." />
                 <button onclick="sendMessage()">ارسال</button>
                 <button class="mic-btn" id="micBtn" onclick="toggleRecording()">🎤</button>
+                <button class="call-btn" onclick="startCall()">📹</button>
             </div>
         </div>
+    </div>
+
+    <!-- پنجره تماس تصویری -->
+    <div class="call-modal" id="callModal">
+        <div class="video-grid">
+            <div class="video-wrapper">
+                <video id="localVideo" autoplay muted playsinline></video>
+                <div class="video-label">شما</div>
+            </div>
+            <div class="video-wrapper">
+                <video id="remoteVideo" autoplay playsinline></video>
+                <div class="video-label">طرف مقابل</div>
+            </div>
+        </div>
+        <div class="call-controls">
+            <button class="end-call-btn" onclick="endCall()">قطع تماس</button>
+        </div>
+    </div>
+
+    <!-- اعلان تماس ورودی -->
+    <div class="incoming-call" id="incomingCall">
+        <span id="callerName"></span> در حال تماس است...
+        <button class="accept-btn" onclick="acceptCall()">پاسخ</button>
+        <button class="reject-btn" onclick="rejectCall()">رد</button>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
@@ -62,10 +104,30 @@
         let audioChunks = [];
         let isRecording = false;
         
+        let localStream;
+        let remoteStream;
+        let peerConnection;
+        let currentCallPartner = null;
+        let isCallActive = false;
+        let incomingOffer = null;
+        let incomingCaller = null;
+
         const messagesDiv = document.getElementById('messages');
         const input = document.getElementById('messageInput');
         const chatHeader = document.getElementById('chatHeader');
         const micBtn = document.getElementById('micBtn');
+        const localVideo = document.getElementById('localVideo');
+        const remoteVideo = document.getElementById('remoteVideo');
+        const callModal = document.getElementById('callModal');
+        const incomingCallDiv = document.getElementById('incomingCall');
+        const callerNameSpan = document.getElementById('callerName');
+
+        const iceServers = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' }
+            ]
+        };
 
         function login() {
             const username = document.getElementById('username').value.trim();
@@ -97,6 +159,7 @@
         }
 
         function startChat() {
+            socket.emit('register', currentUser);
             socket.emit('getMessages');
 
             socket.on('previousMessages', (msgs) => {
@@ -117,6 +180,29 @@
                 } else {
                     addMessage(msg.content, type, msg.sender);
                 }
+            });
+
+            socket.on('call:offer', async (data) => {
+                incomingOffer = data.offer;
+                incomingCaller = data.from;
+                callerNameSpan.textContent = data.from;
+                incomingCallDiv.classList.add('active');
+            });
+
+            socket.on('call:answer', async (data) => {
+                if (peerConnection) {
+                    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+                }
+            });
+
+            socket.on('call:ice-candidate', async (data) => {
+                if (peerConnection) {
+                    await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+                }
+            });
+
+            socket.on('call:end', () => {
+                endCall();
             });
         }
 
@@ -160,16 +246,11 @@
                 stopRecording();
                 return;
             }
-
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 mediaRecorder = new MediaRecorder(stream);
                 audioChunks = [];
-
-                mediaRecorder.ondataavailable = (event) => {
-                    audioChunks.push(event.data);
-                };
-
+                mediaRecorder.ondataavailable = (event) => { audioChunks.push(event.data); };
                 mediaRecorder.onstop = () => {
                     const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
                     const reader = new FileReader();
@@ -180,12 +261,10 @@
                     reader.readAsDataURL(audioBlob);
                     stream.getTracks().forEach(track => track.stop());
                 };
-
                 mediaRecorder.start();
                 isRecording = true;
                 micBtn.classList.add('recording');
                 micBtn.textContent = '⏹️';
-
             } catch (err) {
                 alert('دسترسی به میکروفون داده نشد!');
             }
@@ -198,6 +277,141 @@
                 micBtn.classList.remove('recording');
                 micBtn.textContent = '🎤';
             }
+        }
+
+        async function startCall() {
+            const partner = prompt('نام کاربری طرف مقابل را وارد کنید:');
+            if (!partner || partner === currentUser) return;
+            
+            currentCallPartner = partner;
+            isCallActive = true;
+            
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                localVideo.srcObject = localStream;
+                callModal.classList.add('active');
+                
+                peerConnection = new RTCPeerConnection(iceServers);
+                
+                localStream.getTracks().forEach(track => {
+                    peerConnection.addTrack(track, localStream);
+                });
+                
+                peerConnection.ontrack = (event) => {
+                    if (!remoteStream) {
+                        remoteStream = new MediaStream();
+                        remoteVideo.srcObject = remoteStream;
+                    }
+                    remoteStream.addTrack(event.track);
+                };
+                
+                peerConnection.onicecandidate = (event) => {
+                    if (event.candidate) {
+                        socket.emit('call:ice-candidate', {
+                            to: currentCallPartner,
+                            candidate: event.candidate
+                        });
+                    }
+                };
+                
+                const offer = await peerConnection.createOffer();
+                await peerConnection.setLocalDescription(offer);
+                
+                socket.emit('call:offer', {
+                    to: currentCallPartner,
+                    offer: offer
+                });
+                
+            } catch (err) {
+                alert('دسترسی به دوربین داده نشد!');
+                callModal.classList.remove('active');
+            }
+        }
+
+        async function acceptCall() {
+            incomingCallDiv.classList.remove('active');
+            currentCallPartner = incomingCaller;
+            isCallActive = true;
+            
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                localVideo.srcObject = localStream;
+                callModal.classList.add('active');
+                
+                peerConnection = new RTCPeerConnection(iceServers);
+                
+                localStream.getTracks().forEach(track => {
+                    peerConnection.addTrack(track, localStream);
+                });
+                
+                peerConnection.ontrack = (event) => {
+                    if (!remoteStream) {
+                        remoteStream = new MediaStream();
+                        remoteVideo.srcObject = remoteStream;
+                    }
+                    remoteStream.addTrack(event.track);
+                };
+                
+                peerConnection.onicecandidate = (event) => {
+                    if (event.candidate) {
+                        socket.emit('call:ice-candidate', {
+                            to: currentCallPartner,
+                            candidate: event.candidate
+                        });
+                    }
+                };
+                
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(incomingOffer));
+                const answer = await peerConnection.createAnswer();
+                await peerConnection.setLocalDescription(answer);
+                
+                socket.emit('call:answer', {
+                    to: currentCallPartner,
+                    answer: answer
+                });
+                
+            } catch (err) {
+                alert('دسترسی به دوربین داده نشد!');
+                callModal.classList.remove('active');
+            }
+        }
+
+        function rejectCall() {
+            incomingCallDiv.classList.remove('active');
+            if (incomingCaller) {
+                socket.emit('call:end', { to: incomingCaller });
+            }
+            incomingOffer = null;
+            incomingCaller = null;
+        }
+
+        function endCall() {
+            isCallActive = false;
+            callModal.classList.remove('active');
+            incomingCallDiv.classList.remove('active');
+            
+            if (peerConnection) {
+                peerConnection.close();
+                peerConnection = null;
+            }
+            
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+                localStream = null;
+            }
+            
+            if (remoteStream) {
+                remoteStream.getTracks().forEach(track => track.stop());
+                remoteStream = null;
+            }
+            
+            if (currentCallPartner) {
+                socket.emit('call:end', { to: currentCallPartner });
+                currentCallPartner = null;
+            }
+            
+            localVideo.srcObject = null;
+            remoteVideo.srcObject = null;
         }
 
         input.addEventListener('keypress', (e) => {
