@@ -13,7 +13,6 @@ async function main() {
         driver: sqlite3.Database
     });
 
-    // ساخت جدول با ستون type (برای متن یا صدا)
     await db.exec(`
         CREATE TABLE IF NOT EXISTS messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -44,8 +43,16 @@ async function main() {
         cors: { origin: '*' }
     });
 
+    const onlineUsers = new Map();
+
     io.on('connection', (socket) => {
         console.log('یک کاربر وصل شد:', socket.id);
+
+        socket.on('register', (username) => {
+            onlineUsers.set(username, socket.id);
+            socket.username = username;
+            console.log('کاربر ثبت شد:', username);
+        });
 
         socket.on('getMessages', async () => {
             const messages = await db.all('SELECT * FROM messages ORDER BY id ASC');
@@ -76,7 +83,47 @@ async function main() {
             });
         });
 
+        socket.on('call:offer', (data) => {
+            const targetSocketId = onlineUsers.get(data.to);
+            if (targetSocketId) {
+                io.to(targetSocketId).emit('call:offer', {
+                    from: socket.username,
+                    offer: data.offer
+                });
+            }
+        });
+
+        socket.on('call:answer', (data) => {
+            const targetSocketId = onlineUsers.get(data.to);
+            if (targetSocketId) {
+                io.to(targetSocketId).emit('call:answer', {
+                    from: socket.username,
+                    answer: data.answer
+                });
+            }
+        });
+
+        socket.on('call:ice-candidate', (data) => {
+            const targetSocketId = onlineUsers.get(data.to);
+            if (targetSocketId) {
+                io.to(targetSocketId).emit('call:ice-candidate', {
+                    from: socket.username,
+                    candidate: data.candidate
+                });
+            }
+        });
+
+        socket.on('call:end', (data) => {
+            const targetSocketId = onlineUsers.get(data.to);
+            if (targetSocketId) {
+                io.to(targetSocketId).emit('call:end', { from: socket.username });
+            }
+        });
+
         socket.on('disconnect', () => {
+            if (socket.username) {
+                onlineUsers.delete(socket.username);
+            }
             console.log('کاربر قطع شد:', socket.id);
         });
     });
