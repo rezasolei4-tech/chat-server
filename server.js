@@ -59,6 +59,7 @@ async function main() {
         });
 
         socket.on('sendMessage', async (data) => {
+            console.log('پیام دریافت شد:', data);
             const result = await db.run(
                 'INSERT INTO messages (content, sender) VALUES (?, ?)',
                 data.text,
