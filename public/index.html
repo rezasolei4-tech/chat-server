@@ -12,31 +12,28 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            background-image: url('https://images.pexels.com/photos/30596223/pexels-photo-30596223.jpeg?auto=compress&cs=tinysrgb&w=1920');
-            background-size: cover;
-            background-position: center;
-            background-attachment: fixed;
-        }
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 0;
+            background: #0f172a;
         }
         .chat-container {
             width: 100%;
             max-width: 450px;
             height: 90vh;
-            background: rgba(30, 41, 59, 0.85);
-            backdrop-filter: blur(8px);
+            background-image: url('https://images.pexels.com/photos/30596223/pexels-photo-30596223.jpeg?auto=compress&cs=tinysrgb&w=1920');
+            background-size: cover;
+            background-position: center;
             border-radius: 16px;
             display: flex;
             flex-direction: column;
             overflow: hidden;
             box-shadow: 0 10px 30px rgba(0,0,0,0.6);
             position: relative;
-            z-index: 1;
+        }
+        .chat-container::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.55);
+            z-index: 0;
         }
         .chat-header {
             background: rgba(37, 99, 235, 0.9);
@@ -45,6 +42,8 @@
             font-size: 18px;
             font-weight: bold;
             text-align: center;
+            position: relative;
+            z-index: 1;
         }
         .chat-messages {
             flex: 1;
@@ -53,6 +52,8 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
+            position: relative;
+            z-index: 1;
         }
         .message {
             max-width: 75%;
@@ -79,6 +80,8 @@
             padding: 12px;
             background: rgba(15, 23, 42, 0.8);
             gap: 8px;
+            position: relative;
+            z-index: 1;
         }
         .chat-input input {
             flex: 1;
