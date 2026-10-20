@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>پیام‌رسان من</title>
+    <title>ورود به پیام‌رسان</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -14,6 +14,49 @@
             align-items: center;
             background: #0f172a;
         }
+        
+        .login-box {
+            width: 90%;
+            max-width: 400px;
+            background: rgba(30, 41, 59, 0.85);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+            text-align: center;
+            color: white;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .login-box h2 { margin-bottom: 20px; font-size: 22px; }
+        .login-box input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(15, 23, 42, 0.8);
+            color: white;
+            font-size: 14px;
+            outline: none;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .login-box button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: #2563eb;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .login-box button:hover { background: #1d4ed8; }
+        .error-msg { color: #ef4444; font-size: 13px; margin-top: 10px; display: none; }
+
+        .chat-wrapper { display: none; width: 100%; height: 100vh; justify-content: center; align-items: center; }
+        
         .chat-container {
             width: 100%;
             max-width: 450px;
@@ -107,20 +150,70 @@
     </style>
 </head>
 <body>
-    <div class="chat-container">
-        <div class="chat-header">💬 پیام‌رسان من</div>
-        <div class="chat-messages" id="messages"></div>
-        <div class="chat-input">
-            <input type="text" id="messageInput" placeholder="پیام خود را بنویسید..." />
-            <button onclick="sendMessage()">ارسال</button>
+
+    <div class="login-box" id="loginBox">
+        <h2>🔐 ورود به پیام‌رسان</h2>
+        <input type="text" id="username" placeholder="نام کاربری شما" />
+        <input type="password" id="password" placeholder="رمز عبور" />
+        <button onclick="login()">ورود</button>
+        <div class="error-msg" id="errorMsg">رمز عبور اشتباه است!</div>
+    </div>
+
+    <div class="chat-wrapper" id="chatWrapper">
+        <div class="chat-container">
+            <div class="chat-header" id="chatHeader">💬 پیام‌رسان من</div>
+            <div class="chat-messages" id="messages"></div>
+            <div class="chat-input">
+                <input type="text" id="messageInput" placeholder="پیام خود را بنویسید..." />
+                <button onclick="sendMessage()">ارسال</button>
+            </div>
         </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        const socket = io();
+        let socket;
         const messagesDiv = document.getElementById('messages');
         const input = document.getElementById('messageInput');
+        const chatHeader = document.getElementById('chatHeader');
+
+        function login() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const errorMsg = document.getElementById('errorMsg');
+
+            if (!username) {
+                errorMsg.textContent = "لطفاً نام کاربری را وارد کنید.";
+                errorMsg.style.display = 'block';
+                return;
+            }
+
+            // اتصال به سرور برای بررسی رمز
+            socket = io();
+            
+            socket.emit('checkPassword', password, (response) => {
+                if (response.success) {
+                    // رمز درست است
+                    document.getElementById('loginBox').style.display = 'none';
+                    document.getElementById('chatWrapper').style.display = 'flex';
+                    chatHeader.textContent = '💬 ' + username;
+                    startChat();
+                } else {
+                    // رمز اشتباه است
+                    errorMsg.textContent = "رمز عبور اشتباه است!";
+                    errorMsg.style.display = 'block';
+                    socket.disconnect();
+                    socket = null;
+                }
+            });
+        }
+
+        function startChat() {
+            socket.on('newMessage', (msg) => {
+                addMessage(msg, 'other');
+            });
+            addMessage('سلام! به پیام‌رسان خودت خوش آمدی 👋', 'other');
+        }
 
         function addMessage(text, type) {
             const div = document.createElement('div');
@@ -138,15 +231,9 @@
             input.value = '';
         }
 
-        socket.on('newMessage', (msg) => {
-            addMessage(msg, 'other');
-        });
-
         input.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') sendMessage();
         });
-
-        addMessage('سلام! به پیام‌رسان خودت خوش آمدی 👋', 'other');
     </script>
 </body>
 </html>
