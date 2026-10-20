@@ -32,7 +32,6 @@
         .call-btn { background: #8b5cf6; font-size: 16px; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
         
-        /* پنجره تماس تصویری */
         .call-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.95); z-index: 100; flex-direction: column; justify-content: center; align-items: center; padding: 20px; }
         .call-modal.active { display: flex; }
         .video-grid { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; align-items: center; width: 100%; max-width: 800px; }
@@ -72,7 +71,6 @@
         </div>
     </div>
 
-    <!-- پنجره تماس تصویری -->
     <div class="call-modal" id="callModal">
         <div class="video-grid">
             <div class="video-wrapper">
@@ -89,7 +87,6 @@
         </div>
     </div>
 
-    <!-- اعلان تماس ورودی -->
     <div class="incoming-call" id="incomingCall">
         <span id="callerName"></span> در حال تماس است...
         <button class="accept-btn" onclick="acceptCall()">پاسخ</button>
@@ -122,10 +119,21 @@
         const incomingCallDiv = document.getElementById('incomingCall');
         const callerNameSpan = document.getElementById('callerName');
 
+        // STUN و TURN Serverها برای عبور از NAT
         const iceServers = {
             iceServers: [
                 { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' }
+                { urls: 'stun:stun1.l.google.com:19302' },
+                {
+                    urls: 'turn:openrelay.metered.ca:80',
+                    username: 'openrelayproject',
+                    credential: 'openrelayproject'
+                },
+                {
+                    urls: 'turn:openrelay.metered.ca:443',
+                    username: 'openrelayproject',
+                    credential: 'openrelayproject'
+                }
             ]
         };
 
