@@ -119,20 +119,25 @@
         const incomingCallDiv = document.getElementById('incomingCall');
         const callerNameSpan = document.getElementById('callerName');
 
-        // STUN و TURN Serverها برای عبور از NAT
+        // 🔐 TURN Server اختصاصی Metered (اطلاعات خودت)
         const iceServers = {
             iceServers: [
                 { urls: 'stun:stun.l.google.com:19302' },
                 { urls: 'stun:stun1.l.google.com:19302' },
                 {
-                    urls: 'turn:openrelay.metered.ca:80',
-                    username: 'openrelayproject',
-                    credential: 'openrelayproject'
+                    urls: 'turn:standard.relay.metered.ca:80',
+                    username: '86bbbeda2c37cf6bdb08e360',
+                    credential: 'O7d9/C+WA7JOV/Iq'
                 },
                 {
-                    urls: 'turn:openrelay.metered.ca:443',
-                    username: 'openrelayproject',
-                    credential: 'openrelayproject'
+                    urls: 'turn:standard.relay.metered.ca:443',
+                    username: '86bbbeda2c37cf6bdb08e360',
+                    credential: 'O7d9/C+WA7JOV/Iq'
+                },
+                {
+                    urls: 'turn:standard.relay.metered.ca:443?transport=tcp',
+                    username: '86bbbeda2c37cf6bdb08e360',
+                    credential: 'O7d9/C+WA7JOV/Iq'
                 }
             ]
         };
