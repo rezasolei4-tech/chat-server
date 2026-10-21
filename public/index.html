@@ -14,7 +14,23 @@
         .login-box button:hover { background: #1d4ed8; }
         .error-msg { color: #ef4444; font-size: 13px; margin-top: 10px; display: none; }
         .chat-wrapper { display: none; width: 100%; height: 100vh; justify-content: center; align-items: center; }
-        .chat-container { width: 100%; max-width: 450px; height: 90vh; background-image: url('https://images.pexels.com/photos/30596223/pexels-photo-30596223.jpeg?auto=compress&cs=tinysrgb&w=1920'); background-size: cover; background-position: center; border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.6); position: relative; }
+        
+        /* 🎬 پس‌زمینه گیف متحرک */
+        .chat-container { 
+            width: 100%; 
+            max-width: 450px; 
+            height: 90vh; 
+            background-image: url('https://media1.giphy.com/media/v1.Y2lkPTZjMDliOTUyZWVxY3ZoY2p5c3lpcnVjeHM2M2loN25lcDVsM2pzeGpxbnUyMG5lcSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/QjuFNYKiGXZpTA1mQe/giphy.gif');
+            background-size: cover; 
+            background-position: center; 
+            border-radius: 16px; 
+            display: flex; 
+            flex-direction: column; 
+            overflow: hidden; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6); 
+            position: relative; 
+        }
+        
         .chat-container::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.55); z-index: 0; }
         .chat-header { background: rgba(37, 99, 235, 0.9); color: white; padding: 16px; font-size: 18px; font-weight: bold; text-align: center; position: relative; z-index: 1; }
         .chat-messages { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; position: relative; z-index: 1; }
@@ -119,7 +135,6 @@
         const incomingCallDiv = document.getElementById('incomingCall');
         const callerNameSpan = document.getElementById('callerName');
 
-        // 🔐 TURN Server اختصاصی Metered (اطلاعات خودت)
         const iceServers = {
             iceServers: [
                 { urls: 'stun:stun.l.google.com:19302' },
